@@ -6,6 +6,7 @@ import com.jacky.sql.sqlData.*;
 import java.beans.IndexedPropertyDescriptor;
 import java.sql.ResultSet;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 //用于处理表格每行元素
@@ -13,12 +14,14 @@ public abstract class BaseAtom {
     protected  BaseSqlData primaryKeyValue;
     protected String tableName;
     protected HashMap<String,String> data=new HashMap<>();
+    protected ArrayList<String> dataNames=new ArrayList<>();
 
 
     BaseAtom(String tableName, ResultSet set){
         this.tableName = tableName;
         //this.primaryKeyName = primaryKeyName;
         loadFromResultSet(set);
+        initial();
     }
      BaseAtom(String tableName, BaseSqlData... data){
         this.tableName = tableName;
@@ -27,8 +30,10 @@ public abstract class BaseAtom {
                 data) {
             this.data.put(d.dataName(), d.toString());
         }
+         initial();
     }
     public abstract void loadFromResultSet(ResultSet set);
+    protected abstract void initial();
     public  String generateInsertStatement(){
         StringBuilder builder=new StringBuilder(String.format("INSERT INTO %s VALUE(",tableName));
         boolean needDiv=false;
@@ -72,7 +77,8 @@ public abstract class BaseAtom {
     }
 
     public  void setData(BaseSqlData data){
-        this.data.put(data.dataName(),data.toString());
+        if (dataNames.contains(data.dataName()))
+            this.data.put(data.dataName(),data.toString());
     }
     public  void setData(String  name,boolean value){
         setData(new SqlBoolean(name,value));
