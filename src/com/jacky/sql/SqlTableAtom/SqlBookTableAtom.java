@@ -4,11 +4,11 @@ import com.jacky.sql.sqlData.BaseSqlData;
 import com.jacky.sql.sqlData.nullData;
 
 import java.sql.ResultSet;
-import java.util.Iterator;
+import java.sql.SQLException;
 
 public class SqlBookTableAtom extends BaseAtom{
 
-    SqlBookTableAtom(String tableName, ResultSet set) {
+    SqlBookTableAtom(String tableName, ResultSet set) throws SQLException{
         super(tableName, set);
 
     }
@@ -18,8 +18,11 @@ public class SqlBookTableAtom extends BaseAtom{
     }
 
     @Override
-    public void loadFromResultSet(ResultSet set) {
-
+    public void loadFromResultSet(ResultSet set) throws SQLException {
+        setData(dataNames.get(0),set.getInt(dataNames.get(0)));
+        setData(dataNames.get(1),set.getString(dataNames.get(1)));
+        setData(dataNames.get(2),set.getBoolean(dataNames.get(2)));
+        setData(dataNames.get(3),set.getInt(dataNames.get(3)));
     }
 
     @Override
@@ -31,5 +34,11 @@ public class SqlBookTableAtom extends BaseAtom{
         dataNames.add("author_id");
 
         setPrimaryKey(new nullData("b_id"));
+    }
+
+    @Override
+    public boolean isSetPrimaryKey() {
+        //纯数字
+        return !primaryKeyValue.toString().matches("\\d+");
     }
 }

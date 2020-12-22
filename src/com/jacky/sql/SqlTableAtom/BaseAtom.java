@@ -3,8 +3,8 @@ package com.jacky.sql.SqlTableAtom;
 import com.jacky.sql.err.TableAtomIDNotSetException;
 import com.jacky.sql.sqlData.*;
 
-import java.beans.IndexedPropertyDescriptor;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,10 +14,10 @@ public abstract class BaseAtom {
     protected  BaseSqlData primaryKeyValue;
     protected String tableName;
     protected HashMap<String,String> data=new HashMap<>();
-    protected ArrayList<String> dataNames=new ArrayList<>();
+    protected final ArrayList<String> dataNames=new ArrayList<>();
 
 
-    BaseAtom(String tableName, ResultSet set){
+    BaseAtom(String tableName, ResultSet set)throws SQLException{
         this.tableName = tableName;
         //this.primaryKeyName = primaryKeyName;
         loadFromResultSet(set);
@@ -32,8 +32,9 @@ public abstract class BaseAtom {
         }
          initial();
     }
-    public abstract void loadFromResultSet(ResultSet set);
+    public abstract void loadFromResultSet(ResultSet set)throws SQLException;
     protected abstract void initial();
+    public abstract boolean isSetPrimaryKey();
     public  String generateInsertStatement(){
         StringBuilder builder=new StringBuilder(String.format("INSERT INTO %s VALUE(",tableName));
         boolean needDiv=false;
@@ -50,7 +51,7 @@ public abstract class BaseAtom {
 
     }
     public String generateDeleteStatement()throws TableAtomIDNotSetException{
-        if(primaryKeyValue ==null){
+        if(isSetPrimaryKey()){
             throw  new TableAtomIDNotSetException(this);
         }else {
             return String.format("DELETE FORM %s WHERE %s=%s", tableName,
@@ -58,7 +59,7 @@ public abstract class BaseAtom {
         }
     }
     public  String generateUpdateStatement(){
-        if(primaryKeyValue ==null){
+        if(isSetPrimaryKey()){
             throw  new TableAtomIDNotSetException(this);
         }else {
             StringBuilder builder=new StringBuilder("UPDATE %s SET ");
