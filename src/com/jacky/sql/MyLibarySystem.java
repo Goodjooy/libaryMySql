@@ -6,12 +6,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
+import java.time.Month;
+import java.util.Scanner;
 
-import com.jacky.sql.sqlData.BaseSqlData;
-import com.jacky.sql.sqlData.SqlBoolean;
-import com.jacky.sql.sqlData.SqlNumber;
-import com.jacky.sql.sqlData.SqlString;
-import com.jacky.sql.sqlData.nullData;
+import com.jacky.sql.sqlData.*;
+
+import static com.jacky.sql.SQLStatementGeneration.sqlInsertString;
+import static com.jacky.sql.SQLStatementGeneration.sqlUpdateString;
 
 public class MyLibarySystem {
     final String connectUrl = "jdbc:mysql://127.0.0.1:3306/libSys?characterEncoding=UTF-8&serverTimezone=UTC";
@@ -52,7 +54,8 @@ public class MyLibarySystem {
         statement.close();
         connection.close();
     }
-
+    //管理员专有
+    //向仓库添加新书
     public void AppendNewBook(String bookName, String authorName, String infomationString) throws SQLException {
         int author_id = -1;
         // 检查是否有作者记录
@@ -85,7 +88,7 @@ public class MyLibarySystem {
         System.out.printf("完成添加书本->%s  作者为：%s\n", bookName, authorName);
 
     }
-
+    //搜索书本
     public void bookSearch(String keyWord, boolean cloumMatch, boolean ignoreRent, SearchType searchType)
             throws SQLException {
         String where;
@@ -113,7 +116,7 @@ public class MyLibarySystem {
         }
         set.close();
     }
-
+    //显示全部书本
     public void showAllBook() throws SQLException {
         String sql = "select book.b_id,book.book_name,book.is_rent,author.author_name from book inner join author on book.author_id=author.p_id";
 
@@ -126,51 +129,80 @@ public class MyLibarySystem {
         set.close();
     }
 
-    public static String sqlInsertString(String tableName, BaseSqlData... values) {
-        StringBuilder builder = new StringBuilder("INSERT INTO");
-        builder.append(String.format(" %s value(", tableName));
+    /**
+     * @param userID 借阅的用户
+     * @param bookID 书本的id
+     * @param borrowDays 借阅时常
+     */
+    public  void  borrowBook(int userID,int bookID,int borrowDays) throws SQLException {
+        //检查指定图书是否已经被借阅
+        ResultSet set = statement.executeQuery(String.format("select *from book where b_id=%d and is_rent=false",
+                bookID));
+        if(set.next()){
+            set.close();
+            //检查用户是否存在
+            set=statement.executeQuery(String.format("select *from users where uid=%d",userID));
+            if(set.next()){
+                set.close();
+            //还未被借出
+            //进行借阅处理
+            LocalDate outData=LocalDate.now();
+            LocalDate returnData=outData.plusDays(borrowDays);
 
-        for (int i = 0; i < values.length; i++) {
-            builder.append(String.format("%s", values[i].toString()));
-            if (i != values.length - 1) {
-                builder.append(",");
+            statement.execute(String.format("update book set is_rent=true where b_id=%d",bookID));
+            statement.execute(
+                    sqlInsertString("rent_record",new nullData("id"),new SqlNumber("book_id",bookID),
+                    new SqlNumber("user_id",userID),new SqlData("start_data",outData),
+                    new SqlData("return_data",returnData),new SqlBoolean("is_close",false)));
+
+            }else {
+                System.out.println("用户不存在");
             }
+        }else {
+            System.out.println("该图书已经被借出");
         }
-        builder.append(");");
-        return builder.toString();
     }
+    public  void returnBook(int bookID)throws SQLException{
+        ResultSet set;
+        //查找书本是否存在
+        set=statement.executeQuery(String.format("select *from rent_record where book_id=%d and is_close=false",bookID));
+        if (set.next()){
+            int recordID=set.getInt("id");
+            String returnDate=set.getString("return_data");
+            set.close();
+            //归还图书，关闭借阅记录
+            statement.execute(sqlUpdateString("book",new SqlNumber("b_id",bookID),
+                    new SqlBoolean("is_rent",false)));
+            statement.execute(sqlUpdateString("rent_record",new SqlNumber("id",recordID),
+                    new SqlBoolean("is_close",true)));
 
-    public static String sqlUpdateString(String tableName, String cmpValue, BaseSqlData... changedDatas) {
-        StringBuilder builder = new StringBuilder();
-        builder.append(String.format("UPDATE %s SET ", tableName));
-        for (int i = 0; i < changedDatas.length; i++) {
-            builder.append(String.format("%s=%s", changedDatas[i].dataName(), changedDatas[i].toString()));
-            if (i != changedDatas.length - 1) {
-                builder.append(",");
+            //如果超时归还，发出警告
+            Scanner scanner=new Scanner(returnDate.replace("-"," "));
+            int year =scanner.nextInt();
+            int month=scanner.nextInt();
+            int day=scanner.nextInt();
+            scanner.close();
+            LocalDate date=LocalDate.of(year,Month.of(month),day);
+            if(date.isBefore(LocalDate.now())){
+                System.out.println("超时归还图书！");
             }
-        }
-        if (cmpValue.equals("") || cmpValue != null)
-            builder.append(String.format("WHERE %s", cmpValue));
-        builder.append(";");
-        return builder.toString();
-    }
 
-    // 不能进行复杂的条件语句
-    public static String sqlUpdateString(String tableName, BaseSqlData cmpValue, BaseSqlData... changedDatas) {
-        if (cmpValue != null)
-            return sqlUpdateString(tableName, String.format("%s=%s", cmpValue.dataName(), cmpValue.toString()),
-                    changedDatas);
-        else
-            return sqlUpdateString(tableName, "", changedDatas);
-    }
-
-    public static String sqlDeleteString(String tableName, String limits) {
-        if (limits.equals("")) {
-            // 删除全部
-            return String.format("DELETE FORM %s;", tableName);
-        } else {
-            return String.format("DELETE FORM %s WHERE %s", tableName, limits);
+        }else {
+        System.out.println("该图书不在借阅状态！");
         }
     }
+    public int newUser(String userName) throws SQLException {
+        statement.execute(sqlInsertString("users",new nullData("uid"),
+                new SqlString("name",userName)),Statement.RETURN_GENERATED_KEYS);
+        ResultSet set;
+        set=statement.getGeneratedKeys();
+        if(set.next()){
+            return set.getInt(1);
+        }else {
+            System.out.println("账户新建失败！");
+            return -1;
+        }
+    }
+
 
 }

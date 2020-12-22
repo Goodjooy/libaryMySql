@@ -1,3 +1,5 @@
+package com.jacky.sql;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -8,9 +10,9 @@ import javax.xml.transform.stax.StAXResult;
 
 import com.jacky.sql.MyLibarySystem;
 import com.jacky.sql.MyLibarySystem.SearchType;
-import com.mysql.cj.xdevapi.PreparableStatement;
 
-public class App {
+
+public class JavaSql {
 
     public static void main2(String[] args) throws Exception {
 
@@ -70,11 +72,13 @@ public class App {
 
         system.showAllBook();
 
-        system.bookSearch("林", true, false, SearchType.AUTHOR_NAME);
+        //system.borrowBook(1,5,4);
+        //system.returnBook(5);
+    //    system.bookSearch("林", true, false, SearchType.AUTHOR_NAME);
 
-        system.AppendNewBook("《大话哦数据结构》", "不是吧阿sir", "");
-        system.AppendNewBook("《什么鬼修炼手册》", "不是吧阿sir", "");
-
+  //      system.AppendNewBook("《大话哦ds 数据结构》", "不是吧阿sir", "");
+//        system.AppendNewBook("《sds s》", "dssdfsdsd", "");
+        System.out.println();
         system.showAllBook();
         system.close();
     }
