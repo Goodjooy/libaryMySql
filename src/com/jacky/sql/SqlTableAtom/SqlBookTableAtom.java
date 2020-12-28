@@ -1,20 +1,33 @@
 package com.jacky.sql.SqlTableAtom;
 
-import com.jacky.sql.sqlData.BaseSqlData;
-import com.jacky.sql.sqlData.nullData;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import com.jacky.sql.foreignKey.ForeignInKey;
+import com.jacky.sql.foreignKey.ForeignKey;
+import com.jacky.sql.sqlData.nullData;
+
 public class SqlBookTableAtom extends BaseAtom{
+        public  static final String IDKey="b_id";
+        public  static final String NameKey="book_name";
+        public static final String RentStatusKey="is_rent";
+        public static final String AuthorIDKey="author_id";
 
-    SqlBookTableAtom(String tableName, ResultSet set) throws SQLException{
-        super(tableName, set);
-
+    public SqlBookTableAtom(ResultSet set) throws SQLException {
+        super(set);
     }
 
-    SqlBookTableAtom(String tableName, BaseSqlData... data) {
-        super(tableName, data);
+    public SqlBookTableAtom() {
+        super();
+    }
+
+    public static SqlBookTableAtom generateNewBook(String bookName,BaseAtom authorAtom) {
+        SqlBookTableAtom book = new SqlBookTableAtom();
+        book.setData(SqlBookTableAtom.NameKey, bookName);
+        book.setData(authorAtom.generateForeignInSqlData(book.getTableName()));
+        book.setData(SqlBookTableAtom.RentStatusKey,false);
+
+        return book;
     }
 
     @Override
@@ -28,10 +41,13 @@ public class SqlBookTableAtom extends BaseAtom{
     @Override
     protected void initial() {
         tableName="book";
-        dataNames.add("b_id");
+        dataNames.add("b_id"     );
         dataNames.add("book_name");
-        dataNames.add("is_rent");
+        dataNames.add("is_rent"  );
         dataNames.add("author_id");
+
+        foreignKeys.add(new ForeignKey("author_id","author","author_name"));
+        foreignInTables.add(new ForeignInKey("book_id","rent_record","b_id"));
 
         setPrimaryKey(new nullData("b_id"));
     }

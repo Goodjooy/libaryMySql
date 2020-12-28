@@ -6,11 +6,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-import javax.xml.transform.stax.StAXResult;
-
-import com.jacky.sql.MyLibarySystem;
-import com.jacky.sql.MyLibarySystem.SearchType;
-
 
 public class JavaSql {
 

@@ -1,18 +1,21 @@
 package com.jacky.sql.SqlTableAtom;
 
-import com.jacky.sql.sqlData.BaseSqlData;
-import com.jacky.sql.sqlData.nullData;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import com.jacky.sql.foreignKey.ForeignInKey;
+import com.jacky.sql.sqlData.nullData;
+
 public class SqlAuthorTableAtom extends BaseAtom{
-    SqlAuthorTableAtom(String tableName, ResultSet set) throws SQLException {
-        super(tableName, set);
+    public final static String IDKey="p_id";
+    public final static String nameKey="author_name";
+
+    public SqlAuthorTableAtom(ResultSet set) throws SQLException {
+        super(set);
     }
 
-    SqlAuthorTableAtom(String tableName, BaseSqlData... data) {
-        super(tableName, data);
+    public SqlAuthorTableAtom() {
+        super();
     }
 
     @Override
@@ -26,6 +29,9 @@ public class SqlAuthorTableAtom extends BaseAtom{
         tableName="author";
         dataNames.add("p_id");
         dataNames.add("author_name");
+
+        foreignInTables.add(new ForeignInKey(SqlBookTableAtom.AuthorIDKey, "book",IDKey ));
+
         setPrimaryKey(new nullData("p_id"));
 
     }
