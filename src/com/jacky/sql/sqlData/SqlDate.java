@@ -4,18 +4,18 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.util.Scanner;
 
-public class SqlData extends BaseSqlData{
+public class SqlDate extends BaseSqlData{
     private final LocalDate data;
 
-    public SqlData(String name, LocalDate data){
+    public SqlDate(String name, LocalDate data){
      super(name);
         this.data = data;
     }
-    public SqlData(String name, Date data){
+    public SqlDate(String name, Date data){
         super(name);
         this.data=data.toLocalDate();
     }
-    public SqlData(String name,String data){
+    public SqlDate(String name,String data){
         super(name);
         Scanner scanner=new Scanner(data.replace("-"," "));
         int year,month,day;

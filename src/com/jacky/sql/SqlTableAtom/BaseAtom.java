@@ -16,6 +16,7 @@ import java.util.HashMap;
 
 //用于处理表格每行元素
 public abstract class BaseAtom {
+    private boolean partInsert = false;
     // 主键
     protected BaseSqlData primaryKeyValue = null;
     // 表名称
@@ -33,7 +34,7 @@ public abstract class BaseAtom {
         this.tableName = tableName;
     }
 
-    BaseAtom() {
+    protected BaseAtom() {
         tableName = "";
         initial();
     }
@@ -74,26 +75,40 @@ public abstract class BaseAtom {
      */
     public abstract boolean isSetPrimaryKey();
 
-    public final String generateInsertStatement() {
-        StringBuilder builder = new StringBuilder(String.format("INSERT INTO %s VALUE(", tableName));
+    public final String generateInsertStatemtPrv() {
+        StringBuilder insertDataName = new StringBuilder();
+        StringBuilder insertDataValue = new StringBuilder();
+
         boolean needDiv = false;
 
-        for (String v : dataNames) {
-            BaseSqlData data = this.data.get(v);
+        for (String name : dataNames) {
+            BaseSqlData data = this.data.get(name);
 
             if (needDiv) {
-                builder.append(",");
+                insertDataName.append(",");
+                insertDataValue.append(",");
             }
 
-            if (data == null)
-                builder.append(new nullData(v).toString());
-            else
-                builder.append(data.toString());
-            needDiv = true;
+            if (data != null) {
+                insertDataName.append(data.dataName());
+                insertDataValue.append(data.toString());
+            } else if (data == null && !partInsert) {
+                insertDataName.append(name);
+                insertDataValue.append(new nullData(name));
+            }
         }
-        builder.append(")");
-        return builder.toString();
+        return String.format("INSERT INTO %s(%s) VALUE(%s)", tableName, insertDataName.toString(),
+                insertDataName.toString());
+    }
 
+    public final String generateInsertStatement() {
+        partInsert = false;
+        return generateInsertStatemtPrv();
+    }
+
+    public final String generatePartlyInsertStatemen() {
+        partInsert = true;
+        return generateInsertStatemtPrv();
     }
 
     public final String generateDeleteStatement() throws TableAtomIDNotSetException {
@@ -109,7 +124,7 @@ public abstract class BaseAtom {
         if (isSetPrimaryKey()) {
             throw new TableAtomIDNotSetException(this);
         } else {
-            StringBuilder builder = new StringBuilder(String.format("UPDATE %s SET ",tableName));
+            StringBuilder builder = new StringBuilder(String.format("UPDATE %s SET ", tableName));
             boolean needDiv = false;
             for (String k : updateKeys) {
                 // 如果值为空或者为主键，表示不修改该值，跳过
@@ -212,11 +227,11 @@ public abstract class BaseAtom {
     }
 
     public void setData(String name, LocalDate date) {
-        setData(new SqlData(name, date));
+        setData(new SqlDate(name, date));
     }
 
     public void setData(String name, Date date) {
-        setData(new SqlData(name, date));
+        setData(new SqlDate(name, date));
     }
 
     public void setNullData(String name) {
