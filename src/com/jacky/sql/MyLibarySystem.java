@@ -14,6 +14,7 @@ import com.jacky.sql.SqlTableAtom.SqlAuthorTableAtom;
 import com.jacky.sql.SqlTableAtom.SqlBookTableAtom;
 import com.jacky.sql.SqlTableAtom.SqlRentRecordAtom;
 import com.jacky.sql.SqlTableAtom.SqlUserTableAtom;
+import com.jacky.sql.err.failToInsertNewAuthor;
 
 public class MyLibarySystem {
     final String connectUrl = "jdbc:mysql://127.0.0.1:3306/libSys?characterEncoding=UTF-8&serverTimezone=UTC";
@@ -55,13 +56,17 @@ public class MyLibarySystem {
         connection.close();
     }
 
-    private ResultSet getAuthorFromSql(String authorName) throws SQLException {
+    private SqlAuthorTableAtom getAuthorFromSql(String authorName) throws SQLException {
         SqlAuthorTableAtom author = new SqlAuthorTableAtom();
         author.setData(SqlAuthorTableAtom.nameKey, authorName);
 
         String searchAuthorStatement = author.generateSelfSearchStatement();
 
-        return statement.executeQuery(searchAuthorStatement);
+        ResultSet set = statement.executeQuery(searchAuthorStatement);
+
+        author = new SqlAuthorTableAtom(set);
+        set.close();
+        return author;
     }
 
     // 管理员专有
@@ -93,7 +98,7 @@ public class MyLibarySystem {
                 authorTableAtom.setData(authorTableAtom.getPrimaryKeyName(), set.getInt(1));
                 return authorTableAtom;
             }
-            return null;
+            throw new failToInsertNewAuthor(authorName);
         } finally {
             if (set != null)
                 set.close();
@@ -102,39 +107,31 @@ public class MyLibarySystem {
 
     // 向仓库添加新书
     public void AppendNewBook(String bookName, String authorName, String infomationString) throws SQLException {
-        SqlAuthorTableAtom authorTableAtom = new SqlAuthorTableAtom();
-        authorTableAtom.setData(SqlAuthorTableAtom.nameKey, authorName);
+        SqlAuthorTableAtom authorTableAtom;
 
         // 检查是否有作者记录
-        System.out.println("检查作者是否在数据库中\n");
-        ResultSet set = statement.executeQuery(authorTableAtom.generateSelfSearchStatement());
-        // 如果有
-        if (set.next()) {
-            authorTableAtom = new SqlAuthorTableAtom(set);
-            System.out.printf("在数据库中找到作者信息！\n\t %s, id为=%s\n", authorTableAtom.getData(SqlAuthorTableAtom.nameKey),
-                    authorTableAtom.getData(SqlAuthorTableAtom.IDKey));
-            set.close();
-        } else {
-            set.close();
-            // 插入
-            statement.execute(authorTableAtom.generateInsertStatement(), Statement.RETURN_GENERATED_KEYS);
-            set = statement.getGeneratedKeys();
-            if (set.next()) {
-                authorTableAtom.setData(authorTableAtom.getPrimaryKeyName(), set.getInt(1));
+        try {
+            System.out.println("检查作者是否在数据库中\n");
+            // 如果有
+            if (checkAuthorExist(authorName)) {
+                authorTableAtom = getAuthorFromSql(authorName);
+                System.out.printf("在数据库中找到作者信息！\n\t %s, id为=%s\n", authorTableAtom.getData(SqlAuthorTableAtom.nameKey),
+                        authorTableAtom.getData(SqlAuthorTableAtom.IDKey));
+            } else {
+                // 插入
+                authorTableAtom = addNewAuthor(authorName);
                 System.out.printf("在数据库中未找到作者信息！已经完成添加！\n\t %s, id为=%s\n", authorName,
                         authorTableAtom.getPrimaryKeyValue());
-                set.close();
-            } else {
-                System.out.println("在数据库中未找到作者信息！添加失败！\n");
-                return;
             }
+            // 添加书本
+            SqlBookTableAtom book = SqlBookTableAtom.generateNewBook(bookName, authorTableAtom);
+
+            statement.execute(book.generateInsertStatement());
+            System.out.printf("完成添加书本->%s  作者为：%s\n", bookName, authorName);
+
+        } catch (failToInsertNewAuthor f) {
+            System.out.println("在数据库中未找到作者信息！添加失败！\n");
         }
-        // 添加书本
-        SqlBookTableAtom book = SqlBookTableAtom.generateNewBook(bookName, authorTableAtom);
-
-        statement.execute(book.generateInsertStatement());
-        System.out.printf("完成添加书本->%s  作者为：%s\n", bookName, authorName);
-
     }
 
     // 搜索书本
